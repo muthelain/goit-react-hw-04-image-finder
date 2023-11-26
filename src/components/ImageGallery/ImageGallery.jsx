@@ -7,13 +7,14 @@ import { LoaderSpinner } from 'components/Loader/Loader';
 import { LoadMoreBtn } from 'components/Button/Button';
 import { Modal } from 'components/Modal/Modal';
 
-
 export function ImageGallery({ nameToFetch }) {
   const [arrayOfImages, setArrayOfImages] = useState([]);
   const [status, setStatus] = useState('idle');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [largeImg, setLargeImg] = useState('');
   const [tagsForModal, setTagsForModal] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (nameToFetch) {
@@ -22,28 +23,38 @@ export function ImageGallery({ nameToFetch }) {
         setArrayOfImages(data.hits);
         if (data.hits.length > 0) {
           setStatus('resolved');
-          return;
+        } else {
+          setStatus('rejected');
         }
+      }).catch(error => {
+        console.error("Error fetching data:", error);
         setStatus('rejected');
       });
     }
   }, [nameToFetch]);
 
-  const loadMoreData = () => {
-    loadMoreDataFromAPI().then(data => {
-      setArrayOfImages(prevArray => {
-        return [...prevArray, ...data.hits];
+  useEffect(() => {
+    if (currentPage > 1 && status === 'resolved') {
+      setLoading(true);
+
+      loadMoreDataFromAPI(currentPage).then(data => {
+        setArrayOfImages(prevArray => [...prevArray, ...data.hits]);
+        setLoading(false);
       });
-    });
+    }
+  }, [currentPage, status]);
+
+  const loadMoreData = () => {
+    setCurrentPage(prevPage => prevPage + 1);
   };
+
   const onImageClick = e => {
-    const imgToFind = arrayOfImages.find(
-      img => img.webformatURL === e.currentTarget.src
-    );
+    const imgToFind = arrayOfImages.find(img => img.webformatURL === e.currentTarget.src);
     setLargeImg(imgToFind.largeImageURL);
     setTagsForModal(imgToFind.tags);
     setIsModalVisible(true);
   };
+
   const modalClose = e => {
     setIsModalVisible(false);
   };
@@ -51,8 +62,9 @@ export function ImageGallery({ nameToFetch }) {
   if (status === 'pending') {
     return <LoaderSpinner />;
   }
+
   if (status === 'rejected') {
-    return;
+    return <div>Error loading data</div>;
   }
 
   if (status === 'resolved') {
@@ -60,17 +72,16 @@ export function ImageGallery({ nameToFetch }) {
       <>
         <ImageGalleryList>
           {arrayOfImages.length > 0 &&
-            arrayOfImages.map(img => {
-              return (
-                <ImageGalleryItem
-                  onClick={onImageClick}
-                  tags={img.tags}
-                  webformatURL={img.webformatURL}
-                  key={img.id}
-                />
-              );
-            })}
+            arrayOfImages.map(img => (
+              <ImageGalleryItem
+                onClick={onImageClick}
+                tags={img.tags}
+                webformatURL={img.webformatURL}
+                key={img.id}
+              />
+            ))}
         </ImageGalleryList>
+        {loading && <LoaderSpinner />}
         <LoadMoreBtn loadMoreData={loadMoreData} />
         {isModalVisible && (
           <Modal
