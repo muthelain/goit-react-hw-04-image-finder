@@ -12,17 +12,19 @@ const defaultOptions = {
   },
 };
 
-export async function getDataFromAPI(queryName) {
+export async function getDataFromAPI(queryName, page) {
   const options = { ...defaultOptions };
   options.params.q = queryName;
-  options.params.page = 1;
-  const data = await axios.get(BASE_URL, options).then(response => response.data);
-  return data;
-}
-
-export async function loadMoreDataFromAPI(page) {
-  const options = { ...defaultOptions };
   options.params.page = page;
   const data = await axios.get(BASE_URL, options).then(response => response.data);
   return data;
 }
+
+export async function loadMoreDataFromAPI(queryName, page) {
+  const options = { ...defaultOptions };
+  options.params.q = queryName;
+  options.params.page = page;
+  const data = await axios.get(BASE_URL, options).then(response => response.data);
+  return data;
+}
+

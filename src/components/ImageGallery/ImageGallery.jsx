@@ -17,45 +17,59 @@ export function ImageGallery({ nameToFetch }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (nameToFetch) {
-      setStatus('pending');
-      getDataFromAPI(nameToFetch).then(data => {
+    const fetchData = async () => {
+      try {
+        setStatus('pending');
+        setCurrentPage(1);
+
+        const data = await getDataFromAPI(nameToFetch);
         setArrayOfImages(data.hits);
+
         if (data.hits.length > 0) {
           setStatus('resolved');
         } else {
           setStatus('rejected');
         }
-      }).catch(error => {
+      } catch (error) {
         console.error("Error fetching data:", error);
         setStatus('rejected');
-      });
-    }
+      }
+    };
+
+    fetchData();
   }, [nameToFetch]);
 
   useEffect(() => {
-    if (currentPage > 1 && status === 'resolved') {
-      setLoading(true);
+    const loadMoreData = async () => {
+      try {
+        setLoading(true);
 
-      loadMoreDataFromAPI(currentPage).then(data => {
-        setArrayOfImages(prevArray => [...prevArray, ...data.hits]);
+        const data = await loadMoreDataFromAPI(nameToFetch, currentPage);
+        setArrayOfImages(prevImages => [...prevImages, ...data.hits]);
         setLoading(false);
-      });
-    }
-  }, [currentPage, status]);
+      } catch (error) {
+        console.error("Error loading more data:", error);
+      }
+    };
 
-  const loadMoreData = () => {
+    if (currentPage > 1 && status === 'resolved') {
+      loadMoreData();
+    }
+  }, [currentPage, nameToFetch, status]);
+
+  const handleLoadMore = () => {
     setCurrentPage(prevPage => prevPage + 1);
   };
 
-  const onImageClick = e => {
+  const handleImageClick = (e) => {
     const imgToFind = arrayOfImages.find(img => img.webformatURL === e.currentTarget.src);
+
     setLargeImg(imgToFind.largeImageURL);
     setTagsForModal(imgToFind.tags);
     setIsModalVisible(true);
   };
 
-  const modalClose = e => {
+  const handleModalClose = () => {
     setIsModalVisible(false);
   };
 
@@ -64,7 +78,7 @@ export function ImageGallery({ nameToFetch }) {
   }
 
   if (status === 'rejected') {
-    return <div>Error loading data</div>;
+    return <div>No images found</div>;
   }
 
   if (status === 'resolved') {
@@ -74,7 +88,7 @@ export function ImageGallery({ nameToFetch }) {
           {arrayOfImages.length > 0 &&
             arrayOfImages.map(img => (
               <ImageGalleryItem
-                onClick={onImageClick}
+                onClick={handleImageClick}
                 tags={img.tags}
                 webformatURL={img.webformatURL}
                 key={img.id}
@@ -82,10 +96,10 @@ export function ImageGallery({ nameToFetch }) {
             ))}
         </ImageGalleryList>
         {loading && <LoaderSpinner />}
-        <LoadMoreBtn loadMoreData={loadMoreData} />
+        <LoadMoreBtn loadMoreData={handleLoadMore} />
         {isModalVisible && (
           <Modal
-            modalClose={modalClose}
+            modalClose={handleModalClose}
             largeImg={largeImg}
             tags={tagsForModal}
           />
